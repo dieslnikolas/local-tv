@@ -1,0 +1,126 @@
+services:
+
+  # ─────────────────────────────────────────────
+  #  JELLYFIN – media server
+  #  http://localhost:8096
+  # ─────────────────────────────────────────────
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=http://${HOST_IP}:8096
+    volumes:
+      - ./config/jellyfin:/config
+      - ./config/jellyfin/cache:/cache
+      - ${MEDIA_DIR}/movies:/media/movies:ro
+      - ${MEDIA_DIR}/shows:/media/shows:ro
+      - ${MEDIA_DIR}/cartoons:/media/cartoons:ro
+    ports:
+      - "8096:8096"       # web UI + API
+      - "7359:7359/udp"   # auto-discovery (Samsung TV app ho najde)
+      - "1900:1900/udp"   # DLNA (Samsung TV nativní přehrávač)
+    # devices:
+      # Hardware akcelerace – odkomentuj pokud chceš
+      # Intel iGPU (nejčastější):
+      # - /dev/dri:/dev/dri
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────
+  #  QBITTORRENT – torrent klient
+  #  http://localhost:8080   user: admin  pass: viz logy při prvním spuštění
+  # ─────────────────────────────────────────────
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - ${DOWNLOADS_DIR}:/downloads
+    ports:
+      - "8080:8080"         # web UI
+      - "6881:6881"         # torrent port TCP
+      - "6881:6881/udp"     # torrent port UDP
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  PROWLARR – správce indexerů (torrent stránky)
+  #  http://localhost:9696
+  # ─────────────────────────────────────────────
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/prowlarr:/config
+    ports:
+      - "9696:9696"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  RADARR – správa a automatické stahování filmů
+  #  http://localhost:7878
+  # ─────────────────────────────────────────────
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/radarr:/config
+      - ${MEDIA_DIR}/movies:/movies
+      - ${DOWNLOADS_DIR}:/downloads
+    ports:
+      - "7878:7878"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  SONARR – správa a automatické stahování seriálů
+  #  http://localhost:8989
+  # ─────────────────────────────────────────────
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/sonarr:/config
+      - ${MEDIA_DIR}/shows:/tv
+      - ${MEDIA_DIR}/cartoons:/cartoons
+      - ${DOWNLOADS_DIR}:/downloads
+    ports:
+      - "8989:8989"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  HOMARR – přehledný dashboard všech služeb
+  #  http://localhost:7575
+  # ─────────────────────────────────────────────
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/homarr/configs:/app/data/configs
+      - ./config/homarr/icons:/app/public/icons
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # vidí stav kontejnerů
+    ports:
+      - "7575:7575"
+    restart: unless-stopped
