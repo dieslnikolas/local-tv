@@ -29,8 +29,8 @@ cp .env.example .env
 ```
 Set your values:
 ```
-HOST_IP=192.168.xxx.yyy   # find via ipconfig
-MEDIA_DIR=C:/Media
+HOST_IP=192.168.xxx.yyy   # your host IP
+MEDIA_DIR=C:/Media        # change it if you need to
 ```
 
 ### 3. Create media folders
@@ -45,23 +45,27 @@ mkdir C:\Media\downloads
 docker compose up -d
 ```
 
-### 5. Run setup wizard
-```powershell
-.\setup.ps1
-```
+### 5. Fill in API keys in `.env`
 
-The script will:
-- start the stack if needed
-- read API keys from Radarr, Sonarr, Prowlarr, Bazarr automatically
-- prompt for the 2 keys that can't be read from files (Jellyfin + qBittorrent password)
-- save everything to `.env` and restart Homepage
-- print a checklist of remaining manual steps
+After the stack starts, grab API keys from each service and paste them into `.env`:
+
+| Key | Where to find it |
+|-----|-----------------|
+| `RADARR_API_KEY` | Radarr → Settings → General → API Key |
+| `SONARR_API_KEY` | Sonarr → Settings → General → API Key |
+| `PROWLARR_API_KEY` | Prowlarr → Settings → General → API Key |
+| `BAZARR_API_KEY` | Bazarr → Settings → General → API Key |
+| `JELLYFIN_API_KEY` | Jellyfin → Dashboard → API Keys → `+` |
+| `QBIT_PASSWORD` | qBittorrent → Settings → Web UI → password |
+
+Then restart Homepage to apply the keys:
+```bash
+docker compose restart homepage
+```
 
 ---
 
 ## Manual Setup Reference
-
-The setup script prints a checklist at the end. This is the full reference for each item.
 
 ### qBittorrent (http://localhost:8080)
 1. Settings → Downloads → Default Save Path: `/downloads`

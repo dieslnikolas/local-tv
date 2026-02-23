@@ -2,23 +2,23 @@ services:
 
   # ─────────────────────────────────────────────
   #  JELLYFIN – media server
-  #  http://localhost:8096
+  #  http://localhost:${PORT_JELLYFIN}
   # ─────────────────────────────────────────────
   jellyfin:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
     environment:
       - TZ=${TZ}
-      - JELLYFIN_PublishedServerUrl=http://${HOST_IP}:8096
+      - JELLYFIN_PublishedServerUrl=http://${HOST_IP}:${PORT_JELLYFIN}
     volumes:
       - ./config/jellyfin:/config
       - ./config/jellyfin/cache:/cache
       - ${MEDIA_DIR}/movies:/media/movies
       - ${MEDIA_DIR}/shows:/media/shows
     ports:
-      - "8096:8096"       # web UI + API
-      - "7359:7359/udp"   # auto-discovery (Samsung TV app)
-      - "1900:1900/udp"   # DLNA (Samsung TV native player)
+      - "${PORT_JELLYFIN}:8096"       # web UI + API
+      - "${PORT_JELLYFIN_DISCOVERY}:7359/udp"   # auto-discovery (Samsung TV app)
+      - "${PORT_JELLYFIN_DLNA}:1900/udp"        # DLNA (Samsung TV native player)
     # devices:
       # Hardware acceleration – uncomment if needed
       # Intel iGPU:
@@ -32,7 +32,7 @@ services:
 
   # ─────────────────────────────────────────────
   #  QBITTORRENT – torrent client
-  #  http://localhost:8080   user: admin  pass: see logs on first run
+  #  http://localhost:${PORT_QBITTORRENT}   user: admin  pass: see logs on first run
   # ─────────────────────────────────────────────
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -46,15 +46,15 @@ services:
       - ./config/qbittorrent:/config
       - ${MEDIA_DIR}/downloads:/downloads
     ports:
-      - "8080:8080"         # web UI
-      - "6881:6881"         # torrent port TCP
-      - "6881:6881/udp"     # torrent port UDP
+      - "${PORT_QBITTORRENT}:8080"         # web UI
+      - "${PORT_TORRENT}:6881"             # torrent port TCP
+      - "${PORT_TORRENT}:6881/udp"         # torrent port UDP
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
   #  FLARESOLVERR – Cloudflare bypass proxy
   #  Used by Prowlarr for sites like 1337x
-  #  http://localhost:8191
+  #  http://localhost:${PORT_FLARESOLVERR}
   # ─────────────────────────────────────────────
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
@@ -63,12 +63,12 @@ services:
       - LOG_LEVEL=info
       - TZ=${TZ}
     ports:
-      - "8191:8191"
+      - "${PORT_FLARESOLVERR}:8191"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
   #  PROWLARR – indexer manager (torrent sites)
-  #  http://localhost:9696
+  #  http://localhost:${PORT_PROWLARR}
   # ─────────────────────────────────────────────
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -80,12 +80,12 @@ services:
     volumes:
       - ./config/prowlarr:/config
     ports:
-      - "9696:9696"
+      - "${PORT_PROWLARR}:9696"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
   #  RADARR – movie management and auto-download
-  #  http://localhost:7878
+  #  http://localhost:${PORT_RADARR}
   # ─────────────────────────────────────────────
   radarr:
     image: lscr.io/linuxserver/radarr:latest
@@ -99,12 +99,12 @@ services:
       - ${MEDIA_DIR}/movies:/movies
       - ${MEDIA_DIR}/downloads:/downloads
     ports:
-      - "7878:7878"
+      - "${PORT_RADARR}:7878"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
   #  SONARR – TV show management and auto-download
-  #  http://localhost:8989
+  #  http://localhost:${PORT_SONARR}
   # ─────────────────────────────────────────────
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
@@ -118,12 +118,12 @@ services:
       - ${MEDIA_DIR}/shows:/shows
       - ${MEDIA_DIR}/downloads:/downloads
     ports:
-      - "8989:8989"
+      - "${PORT_SONARR}:8989"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
   #  BAZARR – automatic subtitle downloads
-  #  http://localhost:6767
+  #  http://localhost:${PORT_BAZARR}
   # ─────────────────────────────────────────────
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -137,12 +137,12 @@ services:
       - ${MEDIA_DIR}/movies:/movies
       - ${MEDIA_DIR}/shows:/shows
     ports:
-      - "6767:6767"
+      - "${PORT_BAZARR}:6767"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
   #  HOMEPAGE – services dashboard
-  #  http://localhost:3000
+  #  http://localhost:${PORT_HOMEPAGE}
   # ─────────────────────────────────────────────
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
@@ -159,7 +159,7 @@ services:
       - ./config/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro   # container status visibility
     ports:
-      - "3000:3000"
+      - "${PORT_HOMEPAGE}:3000"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
