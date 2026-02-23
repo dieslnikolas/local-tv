@@ -23,14 +23,14 @@ Home media server built on Jellyfin with automated downloading.
 ### 1. Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 
-### 2. Create `.env` file
+### 2. Edit `.env`
 ```bash
 cp .env.example .env
 ```
-Then edit `.env`:
+Set your values:
 ```
-HOST_IP=192.168.xxx.yyy   # your local IP – find it via ipconfig
-MEDIA_DIR=C:/Media        # where your media and downloads will live
+HOST_IP=192.168.xxx.yyy   # find via ipconfig
+MEDIA_DIR=C:/Media
 ```
 
 ### 3. Create media folders
@@ -45,81 +45,59 @@ mkdir C:\Media\downloads
 docker compose up -d
 ```
 
-### 5. Get qBittorrent password (first run only)
-```bash
-docker logs qbittorrent 2>&1 | grep "password"
+### 5. Run setup wizard
+```powershell
+.\setup.ps1
 ```
+
+The script will:
+- start the stack if needed
+- read API keys from Radarr, Sonarr, Prowlarr, Bazarr automatically
+- prompt for the 2 keys that can't be read from files (Jellyfin + qBittorrent password)
+- save everything to `.env` and restart Homepage
+- print a checklist of remaining manual steps
 
 ---
 
-## Initial Setup
+## Manual Setup Reference
 
-Do these in order — each service depends on the previous ones.
+The setup script prints a checklist at the end. This is the full reference for each item.
 
-### 1. Jellyfin (http://localhost:8096)
-1. Run the setup wizard – create an admin account
-2. Add libraries (set preferred metadata language to your preference for each):
-   - **Movies** → `/media/movies`
-   - **Shows** → `/media/shows`
-3. Dashboard → Advanced → **API Keys** → `+` → copy the key into `.env` as `JELLYFIN_API_KEY`
-
-### 2. qBittorrent (http://localhost:8080)
-1. Log in (`admin` / password from logs above), then immediately change it: Settings → Web UI → Authentication
-2. Settings → Downloads → Default Save Path: `/downloads`
-3. Settings → Downloads → add two categories:
+### qBittorrent (http://localhost:8080)
+1. Settings → Downloads → Default Save Path: `/downloads`
+2. Settings → Downloads → add two categories:
    - `radarr` → save path `/downloads/radarr`
    - `sonarr` → save path `/downloads/sonarr`
-4. Copy your new password into `.env` as `QBIT_PASSWORD`
 
-### 3. Prowlarr (http://localhost:9696)
-**FlareSolverr proxy** (needed for 1337x and similar Cloudflare-protected sites):
-1. Settings → **Indexers** → scroll to **Indexer Proxies** → `+` → FlareSolverr
-   - Host: `http://flaresolverr:8191`, Tags: `flare` → Save
+### Prowlarr (http://localhost:9696)
+1. Settings → **Indexers** → Indexer Proxies → `+` → FlareSolverr
+   - Host: `http://flaresolverr:8191`, Tags: `flare`
+2. Settings → **Apps** → `+` → Radarr (host `radarr`, port `7878`)
+3. Settings → **Apps** → `+` → Sonarr (host `sonarr`, port `8989`)
+4. Indexers → **+ Add Indexer** → `1337x` → Tags: `flare` → Test → Save
+   *(Tags must match exactly — that's how Prowlarr routes through FlareSolverr)*
 
-**Connect to Radarr & Sonarr:**
-2. Settings → **Apps** → `+` → Radarr: host `radarr`, port `7878`, API key from Radarr → Settings → General
-3. Settings → **Apps** → `+` → Sonarr: host `sonarr`, port `8989`, API key from Sonarr → Settings → General
-
-**Add 1337x:**
-4. Indexers → **+ Add Indexer** → search `1337x` → Tags: `flare` → Test → Save
-   *(The `flare` tag routes requests through FlareSolverr — must match exactly)*
-
-### 4. Radarr (http://localhost:7878)
-1. Settings → Media Management → Root Folders → `+` → `/movies`
+### Radarr (http://localhost:7878)
+1. Settings → Media Management → Root Folders → `/movies`
 2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, category `radarr`
 3. Settings → Connect → `+` → **Emby/Jellyfin**: host `jellyfin`, port `8096`, API key from `.env`
-   *(This notifies Jellyfin instantly after each download — no manual scan needed)*
+   *(Notifies Jellyfin instantly after each download — no manual scan needed)*
 
-### 5. Sonarr (http://localhost:8989)
-1. Settings → Media Management → Root Folders → `+` → `/shows`
+### Sonarr (http://localhost:8989)
+1. Settings → Media Management → Root Folders → `/shows`
 2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, category `sonarr`
-3. Settings → Connect → `+` → **Emby/Jellyfin**: same config as Radarr above
+3. Settings → Connect → `+` → **Emby/Jellyfin**: same as Radarr above
 
-### 6. Bazarr (http://localhost:6767)
-Automatically downloads subtitles for your entire library.
-
-1. Settings → **Radarr**: enable, URL `http://radarr:7878`, API key from Radarr → Settings → General → Save & test
-2. Settings → **Sonarr**: enable, URL `http://sonarr:8989`, API key from Sonarr → Settings → General → Save & test
-3. Settings → **Languages** → Add profile: Czech (first) + English (fallback) → assign to both Radarr and Sonarr
-4. Settings → **Providers** → `+` → **OpenSubtitles.com** (free account at opensubtitles.com)
+### Bazarr (http://localhost:6767)
+1. Settings → **Radarr**: URL `http://radarr:7878`, API key from Radarr → Settings → General
+2. Settings → **Sonarr**: URL `http://sonarr:8989`, API key from Sonarr → Settings → General
+3. Settings → **Languages** → add profile: Czech (first) + English (fallback) → assign to Radarr and Sonarr
+4. Settings → **Providers** → `+` → OpenSubtitles.com (free account required)
 5. System → Tasks → **Search for missing subtitles** → run once to backfill existing library
 
-### 7. Homepage (http://localhost:3000)
-Run the setup script to fill API keys automatically:
-```powershell
-.\setup-keys.ps1
-```
-Then add the remaining keys to [`.env`](.env) manually:
-
-| Variable | Where to find it |
-|---|---|
-| `JELLYFIN_API_KEY` | copied in step 1 |
-| `QBIT_PASSWORD` | set in step 2 |
-| `BAZARR_API_KEY` | Bazarr → Settings → General → Security → API Key |
-
-```bash
-docker compose restart homepage
-```
+### Jellyfin (http://localhost:8096)
+1. Run setup wizard – create admin account
+2. Add libraries: **Movies** → `/media/movies`, **Shows** → `/media/shows`
 
 ---
 
