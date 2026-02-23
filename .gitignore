@@ -1,2 +1,8 @@
+# Ignore configuration files
 config/
+
+# Ignore Claude's configuration directory
 .claude/
+
+# Ignore environment variable files
+.env

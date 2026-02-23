@@ -13,16 +13,15 @@ services:
     volumes:
       - ./config/jellyfin:/config
       - ./config/jellyfin/cache:/cache
-      - ${MEDIA_DIR}/movies:/media/movies:ro
-      - ${MEDIA_DIR}/shows:/media/shows:ro
-      - ${MEDIA_DIR}/cartoons:/media/cartoons:ro
+      - ${MEDIA_DIR}/movies:/media/movies
+      - ${MEDIA_DIR}/shows:/media/shows
     ports:
       - "8096:8096"       # web UI + API
-      - "7359:7359/udp"   # auto-discovery (Samsung TV app ho najde)
-      - "1900:1900/udp"   # DLNA (Samsung TV nativní přehrávač)
+      - "7359:7359/udp"   # auto-discovery (Samsung TV app)
+      - "1900:1900/udp"   # DLNA (Samsung TV native player)
     # devices:
-      # Hardware akcelerace – odkomentuj pokud chceš
-      # Intel iGPU (nejčastější):
+      # Hardware acceleration – uncomment if needed
+      # Intel iGPU:
       # - /dev/dri:/dev/dri
     restart: unless-stopped
     healthcheck:
@@ -32,8 +31,8 @@ services:
       retries: 3
 
   # ─────────────────────────────────────────────
-  #  QBITTORRENT – torrent klient
-  #  http://localhost:8080   user: admin  pass: viz logy při prvním spuštění
+  #  QBITTORRENT – torrent client
+  #  http://localhost:8080   user: admin  pass: see logs on first run
   # ─────────────────────────────────────────────
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -45,7 +44,7 @@ services:
       - WEBUI_PORT=8080
     volumes:
       - ./config/qbittorrent:/config
-      - ${DOWNLOADS_DIR}:/downloads
+      - ${MEDIA_DIR}/downloads:/downloads
     ports:
       - "8080:8080"         # web UI
       - "6881:6881"         # torrent port TCP
@@ -53,7 +52,22 @@ services:
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
-  #  PROWLARR – správce indexerů (torrent stránky)
+  #  FLARESOLVERR – Cloudflare bypass proxy
+  #  Used by Prowlarr for sites like 1337x
+  #  http://localhost:8191
+  # ─────────────────────────────────────────────
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ}
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  PROWLARR – indexer manager (torrent sites)
   #  http://localhost:9696
   # ─────────────────────────────────────────────
   prowlarr:
@@ -70,7 +84,7 @@ services:
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
-  #  RADARR – správa a automatické stahování filmů
+  #  RADARR – movie management and auto-download
   #  http://localhost:7878
   # ─────────────────────────────────────────────
   radarr:
@@ -83,13 +97,13 @@ services:
     volumes:
       - ./config/radarr:/config
       - ${MEDIA_DIR}/movies:/movies
-      - ${DOWNLOADS_DIR}:/downloads
+      - ${MEDIA_DIR}/downloads:/downloads
     ports:
       - "7878:7878"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
-  #  SONARR – správa a automatické stahování seriálů
+  #  SONARR – TV show management and auto-download
   #  http://localhost:8989
   # ─────────────────────────────────────────────
   sonarr:
@@ -101,26 +115,64 @@ services:
       - TZ=${TZ}
     volumes:
       - ./config/sonarr:/config
-      - ${MEDIA_DIR}/shows:/tv
-      - ${MEDIA_DIR}/cartoons:/cartoons
-      - ${DOWNLOADS_DIR}:/downloads
+      - ${MEDIA_DIR}/shows:/shows
+      - ${MEDIA_DIR}/downloads:/downloads
     ports:
       - "8989:8989"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
-  #  HOMARR – přehledný dashboard všech služeb
-  #  http://localhost:7575
+  #  BAZARR – automatic subtitle downloads
+  #  http://localhost:6767
   # ─────────────────────────────────────────────
-  homarr:
-    image: ghcr.io/ajnart/homarr:latest
-    container_name: homarr
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
     environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ./config/homarr/configs:/app/data/configs
-      - ./config/homarr/icons:/app/public/icons
-      - /var/run/docker.sock:/var/run/docker.sock:ro   # vidí stav kontejnerů
+      - ./config/bazarr:/config
+      - ${MEDIA_DIR}/movies:/movies
+      - ${MEDIA_DIR}/shows:/shows
     ports:
-      - "7575:7575"
+      - "6767:6767"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  HOMEPAGE – services dashboard
+  #  http://localhost:3000
+  # ─────────────────────────────────────────────
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      - TZ=${TZ}
+      - HOMEPAGE_VAR_RADARR_KEY=${RADARR_API_KEY}
+      - HOMEPAGE_VAR_SONARR_KEY=${SONARR_API_KEY}
+      - HOMEPAGE_VAR_PROWLARR_KEY=${PROWLARR_API_KEY}
+      - HOMEPAGE_VAR_JELLYFIN_KEY=${JELLYFIN_API_KEY}
+      - HOMEPAGE_VAR_QBIT_PASSWORD=${QBIT_PASSWORD}
+      - HOMEPAGE_VAR_BAZARR_KEY=${BAZARR_API_KEY}
+    volumes:
+      - ./config/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # container status visibility
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  WATCHTOWER – automatic image updates
+  #  Runs every day at 4:00
+  # ─────────────────────────────────────────────
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_CLEANUP=true          # remove old images after update
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *  # every day at 4:00
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
