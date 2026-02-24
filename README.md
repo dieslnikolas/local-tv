@@ -14,6 +14,7 @@ Home media server built on Jellyfin with automated downloading.
 | **Radarr** | http://localhost:7878 | Automated movie downloads |
 | **Sonarr** | http://localhost:8989 | Automated TV show downloads |
 | **Bazarr** | http://localhost:6767 | Automatic subtitle downloads (cs-CZ + EN) |
+| **Glances** | http://localhost:61208 | System monitor – CPU, RAM, disk graphs |
 | **Watchtower** | *(no UI)* | Automatic container updates (daily at 4:00) |
 
 ---
@@ -58,14 +59,14 @@ After the stack starts, grab API keys from each service and paste them into `.en
 | `JELLYFIN_API_KEY` | Jellyfin → Dashboard → API Keys → `+` |
 | `QBIT_PASSWORD` | qBittorrent → Settings → Web UI → password |
 
-Then restart Homepage to apply the keys:
+Then restart to apply the keys:
 ```bash
-docker compose restart homepage
+docker compose up -d
 ```
 
 ---
 
-## Manual Setup Reference
+## Configuration
 
 ### qBittorrent (http://localhost:8080)
 1. Settings → Downloads → Default Save Path: `/downloads`
@@ -93,11 +94,22 @@ docker compose restart homepage
 3. Settings → Connect → `+` → **Emby/Jellyfin**: same as Radarr above
 
 ### Bazarr (http://localhost:6767)
-1. Settings → **Radarr**: URL `http://radarr:7878`, API key from Radarr → Settings → General
-2. Settings → **Sonarr**: URL `http://sonarr:8989`, API key from Sonarr → Settings → General
-3. Settings → **Languages** → add profile: Czech (first) + English (fallback) → assign to Radarr and Sonarr
-4. Settings → **Providers** → `+` → OpenSubtitles.com (free account required)
-5. System → Tasks → **Search for missing subtitles** → run once to backfill existing library
+1. Settings → **Radarr**: URL `http://radarr:7878`, API key from Radarr → Settings → General → Save
+2. Settings → **Sonarr**: URL `http://sonarr:8989`, API key from Sonarr → Settings → General → Save
+
+3. Settings → **Languages** → Language Profiles → `+`
+   - Name: `Czech + English`
+   - Add language: **Czech** (priority 1)
+   - Add language: **English** (priority 2, fallback)
+   - Save
+
+4. Settings → **Radarr** (scroll down) → Default Profile: `Czech + English` → Save
+5. Settings → **Sonarr** (scroll down) → Default Profile: `Czech + English` → Save
+
+   *(From this point every new movie/show added via Radarr or Sonarr will automatically get subtitles in Czech and English.)*
+
+6. Settings → **Providers** → `+` → OpenSubtitles.com (free account required)
+7. System → Tasks → **Search for missing subtitles** → run once to backfill existing library
 
 ### Jellyfin (http://localhost:8096)
 1. Run setup wizard – create admin account

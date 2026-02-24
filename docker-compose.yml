@@ -52,6 +52,25 @@ services:
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
+  #  GLANCES – system resource monitor
+  #  http://localhost:${PORT_GLANCES}
+  #  Shows CPU, RAM, disk usage with graphs
+  # ─────────────────────────────────────────────
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    pid: host
+    environment:
+      - GLANCES_OPT=-w
+      - TZ=${TZ}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${MEDIA_DIR}:/media:ro   # exposes media drive stats (/media mount point)
+    ports:
+      - "${PORT_GLANCES}:61208"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
   #  FLARESOLVERR – Cloudflare bypass proxy
   #  Used by Prowlarr for sites like 1337x
   #  http://localhost:${PORT_FLARESOLVERR}
