@@ -69,10 +69,10 @@ docker compose up -d
 ## Configuration
 
 ### qBittorrent (http://localhost:8080)
-1. Settings → Downloads → Default Save Path: `/downloads`
+1. Settings → Downloads → Default Save Path: `/data/downloads`
 2. Settings → Downloads → add two categories:
-   - `radarr` → save path `/downloads/radarr`
-   - `sonarr` → save path `/downloads/sonarr`
+   - `radarr` → save path `/data/downloads/radarr`
+   - `sonarr` → save path `/data/downloads/sonarr`
 
 ### Prowlarr (http://localhost:9696)
 1. Settings → **Indexers** → Indexer Proxies → `+` → FlareSolverr
@@ -83,37 +83,40 @@ docker compose up -d
    *(Tags must match exactly — that's how Prowlarr routes through FlareSolverr)*
 
 ### Radarr (http://localhost:7878)
-1. Settings → Media Management → Root Folders → `/movies`
+1. Settings → Media Management → Root Folders → `/data/movies`
 2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, category `radarr`
 3. Settings → Connect → `+` → **Emby/Jellyfin**: host `jellyfin`, port `8096`, API key from `.env`
    *(Notifies Jellyfin instantly after each download — no manual scan needed)*
 
 ### Sonarr (http://localhost:8989)
-1. Settings → Media Management → Root Folders → `/shows`
+1. Settings → Media Management → Root Folders → `/data/shows`
 2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, category `sonarr`
 3. Settings → Connect → `+` → **Emby/Jellyfin**: same as Radarr above
 
 ### Bazarr (http://localhost:6767)
 1. Settings → **Radarr**: URL `http://radarr:7878`, API key from Radarr → Settings → General → Save
 2. Settings → **Sonarr**: URL `http://sonarr:8989`, API key from Sonarr → Settings → General → Save
-
 3. Settings → **Languages** → Language Profiles → `+`
    - Name: `Czech + English`
    - Add language: **Czech** (priority 1)
    - Add language: **English** (priority 2, fallback)
    - Save
-
 4. Settings → **Radarr** (scroll down) → Default Profile: `Czech + English` → Save
 5. Settings → **Sonarr** (scroll down) → Default Profile: `Czech + English` → Save
-
    *(From this point every new movie/show added via Radarr or Sonarr will automatically get subtitles in Czech and English.)*
-
 6. Settings → **Providers** → `+` → OpenSubtitles.com (free account required)
 7. System → Tasks → **Search for missing subtitles** → run once to backfill existing library
 
 ### Jellyfin (http://localhost:8096)
 1. Run setup wizard – create admin account
-2. Add libraries: **Movies** → `/media/movies`, **Shows** → `/media/shows`
+2. Add libraries: **Movies** → `/data/movies`, **Shows** → `/data/shows`
+
+#### Hardware transcoding
+
+> **Windows limitation:** `/dev/dri` je linuxový device node — na Windows/Docker Desktop
+> nefunguje. Jellyfin transcoduje na CPU. Pokud stack přesunete na Linux host,
+> odkomentujte `devices: - /dev/dri:/dev/dri` v `docker-compose.yml` a pak nastavte:
+> Dashboard → Playback → Hardware acceleration → Intel QuickSync / VAAPI.
 
 ---
 
@@ -130,7 +133,7 @@ The movie will appear in Jellyfin automatically.
 ### Download a TV show
 1. Open **http://localhost:8989** (Sonarr)
 2. Series → **Add New** → type the show name
-3. Root Folder: `/shows`
+3. Root Folder: `/data/shows`
 4. Click **Add Series**
 
 ### Add a file manually
@@ -182,11 +185,16 @@ local-tv/
 │   ├── prowlarr/
 │   └── homepage/
 │
-C:/Media/                   ← your media (path from .env)
-├── movies/
-├── shows/
-└── downloads/              ← in-progress downloads (moved to movies/shows when done)
+C:/Media/                   ← your media (path from .env), mounted as /data in all containers
+├── movies/                 ← /data/movies inside containers
+├── shows/                  ← /data/shows inside containers
+└── downloads/              ← /data/downloads – torrent client saves here
 ```
+
+All containers share the same `/data` mount, which enables **hardlinks**: after download,
+Radarr/Sonarr create a hardlink from `/data/downloads/…` to `/data/movies/…` (or shows).
+The file exists on disk only once — qBittorrent keeps seeding from `downloads/`,
+Jellyfin reads from `movies/` or `shows/`.
 
 > All service configs live in `config/` – restarting (`docker compose down && up -d`) preserves everything.
 > Deleting `config/` means you'll need to reconfigure from scratch.
