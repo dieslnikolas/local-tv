@@ -188,6 +188,7 @@ services:
       - TZ=${TZ}
       - WATCHTOWER_CLEANUP=true          # remove old images after update
       - WATCHTOWER_SCHEDULE=0 0 4 * * *  # every day at 4:00
+      - DOCKER_API_VERSION=1.44          # for compatibility with older Docker versions - Debian
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
