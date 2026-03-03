@@ -1,65 +1,42 @@
 # Local TV Stack
 
-Home media server built on Jellyfin with automated downloading.
+Home media server: Jellyfin + automated downloading via Radarr/Sonarr.
 
 ## Services
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Jellyfin** | http://localhost:8096 | Media server – watch movies and shows |
-| **Homepage** | http://localhost:3000 | Services dashboard |
-| **qBittorrent** | http://localhost:8080 | Torrent client |
-| **Prowlarr** | http://localhost:9696 | Torrent indexer manager |
-| **FlareSolverr** | http://localhost:8191 | Cloudflare bypass proxy (for 1337x etc.) |
-| **Radarr** | http://localhost:7878 | Automated movie downloads |
-| **Sonarr** | http://localhost:8989 | Automated TV show downloads |
-| **Bazarr** | http://localhost:6767 | Automatic subtitle downloads (cs-CZ + EN) |
-| **Glances** | http://localhost:61208 | System monitor – CPU, RAM, disk graphs |
-| **Watchtower** | *(no UI)* | Automatic container updates (daily at 4:00) |
+| Service | Port | Description |
+|---------|------|-------------|
+| **Jellyfin** | 8096 | Media server |
+| **Homepage** | 3000 | Dashboard |
+| **qBittorrent** | 8080 | Torrent client |
+| **Prowlarr** | 9696 | Indexer manager |
+| **FlareSolverr** | 8191 | Cloudflare bypass (for 1337x etc.) |
+| **Radarr** | 7878 | Movie automation |
+| **Sonarr** | 8989 | TV show automation |
+| **Bazarr** | 6767 | Subtitle downloads |
+| **Glances** | 61208 | System monitor |
+| **Watchtower** | — | Auto-updates containers daily at 4:00 |
 
 ---
 
 ## Quick Start
 
-### 1. Prerequisites
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+**Requirements:** Docker + Docker Compose plugin on any Linux host (or WSL2).
 
-### 2. Edit `.env`
 ```bash
+git clone <repo> local-tv && cd local-tv
 cp .env.example .env
-```
-Set your values:
-```
-HOST_IP=192.168.xxx.yyy   # your host IP
-MEDIA_DIR=C:/Media        # change it if you need to
+$EDITOR .env
 ```
 
-### 3. Create media folders
-```powershell
-mkdir C:\Media\movies
-mkdir C:\Media\shows
-mkdir C:\Media\downloads
-```
+Set at minimum: `HOST_IP`, `MEDIA_DIR`, `CONFIG_DIR` — see [.env.example](.env.example) for all variables and descriptions.
 
-### 4. Start the stack
+Create the media folders:
 ```bash
-docker compose up -d
+mkdir -p /mnt/media/{movies,shows,downloads}
 ```
 
-### 5. Fill in API keys in `.env`
-
-After the stack starts, grab API keys from each service and paste them into `.env`:
-
-| Key | Where to find it |
-|-----|-----------------|
-| `RADARR_API_KEY` | Radarr → Settings → General → API Key |
-| `SONARR_API_KEY` | Sonarr → Settings → General → API Key |
-| `PROWLARR_API_KEY` | Prowlarr → Settings → General → API Key |
-| `BAZARR_API_KEY` | Bazarr → Settings → General → API Key |
-| `JELLYFIN_API_KEY` | Jellyfin → Dashboard → API Keys → `+` |
-| `QBIT_PASSWORD` | qBittorrent → Settings → Web UI → password |
-
-Then restart to apply the keys:
+Start:
 ```bash
 docker compose up -d
 ```
@@ -68,105 +45,61 @@ docker compose up -d
 
 ## Configuration
 
-### qBittorrent (http://localhost:8080)
+After first start, configure each service once. All URLs use your `HOST_IP`.
+
+### qBittorrent (`:8080`)
+
+> **First login:** qBittorrent v5+ generates a random temporary password on first run.
+> Get it from logs: `docker logs qbittorrent 2>&1 | grep -i password`
+> Username is `admin`. Then set a permanent password in Settings → Web UI.
+
 1. Settings → Downloads → Default Save Path: `/data/downloads`
-2. Settings → Downloads → add two categories:
-   - `radarr` → save path `/data/downloads/radarr`
-   - `sonarr` → save path `/data/downloads/sonarr`
+2. Settings → Downloads → Categories:
+   - `radarr` → `/data/downloads/radarr`
+   - `sonarr` → `/data/downloads/sonarr`
 
-### Prowlarr (http://localhost:9696)
-1. Settings → **Indexers** → Indexer Proxies → `+` → FlareSolverr
-   - Host: `http://flaresolverr:8191`, Tags: `flare`
-2. Settings → **Apps** → `+` → Radarr (host `radarr`, port `7878`)
-3. Settings → **Apps** → `+` → Sonarr (host `sonarr`, port `8989`)
-4. Indexers → **+ Add Indexer** → `1337x` → Tags: `flare` → Test → Save
-   *(Tags must match exactly — that's how Prowlarr routes through FlareSolverr)*
+### Jellyfin (`:8096`)
+1. Run setup wizard, create admin account
+2. Add libraries: Movies → `/data/movies`, Shows → `/data/shows`
+3. Dashboard → API Keys → create a key and put it in `.env` as `JELLYFIN_API_KEY`
+4. Dashboard → Playback → Hardware acceleration → VAAPI (if host has Intel iGPU; remove `devices` from `docker-compose.yml` if it doesn't)
 
-### Radarr (http://localhost:7878)
+### Radarr (`:7878`)
 1. Settings → Media Management → Root Folders → `/data/movies`
-2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, category `radarr`
-3. Settings → Connect → `+` → **Emby/Jellyfin**: host `jellyfin`, port `8096`, API key from `.env`
-   *(Notifies Jellyfin instantly after each download — no manual scan needed)*
+2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, username `admin`, password from `.env`, category `radarr`
+3. Settings → Connect → `+` → Emby/Jellyfin: host `jellyfin`, port `8096`, API key from `.env`
+4. Settings → General → API Key → copy to `.env` as `RADARR_API_KEY`
 
-### Sonarr (http://localhost:8989)
+### Sonarr (`:8989`)
 1. Settings → Media Management → Root Folders → `/data/shows`
-2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, category `sonarr`
-3. Settings → Connect → `+` → **Emby/Jellyfin**: same as Radarr above
+2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, username `admin`, password from `.env`, category `sonarr`
+3. Settings → Connect → `+` → Emby/Jellyfin: same as Radarr
+4. Settings → General → API Key → copy to `.env` as `SONARR_API_KEY`
 
-### Bazarr (http://localhost:6767)
-1. Settings → **Radarr**: URL `http://radarr:7878`, API key from Radarr → Settings → General → Save
-2. Settings → **Sonarr**: URL `http://sonarr:8989`, API key from Sonarr → Settings → General → Save
-3. Settings → **Languages** → Language Profiles → `+`
-   - Name: `Czech + English`
-   - Add language: **Czech** (priority 1)
-   - Add language: **English** (priority 2, fallback)
-   - Save
-4. Settings → **Radarr** (scroll down) → Default Profile: `Czech + English` → Save
-5. Settings → **Sonarr** (scroll down) → Default Profile: `Czech + English` → Save
-   *(From this point every new movie/show added via Radarr or Sonarr will automatically get subtitles in Czech and English.)*
-6. Settings → **Providers** → `+` → OpenSubtitles.com (free account required)
-7. System → Tasks → **Search for missing subtitles** → run once to backfill existing library
+### Prowlarr (`:9696`)
+> Needs Radarr and Sonarr API keys — grab them first (previous step).
 
-### Jellyfin (http://localhost:8096)
-1. Run setup wizard – create admin account
-2. Add libraries: **Movies** → `/data/movies`, **Shows** → `/data/shows`
+1. Settings → Indexer Proxies → `+` → FlareSolverr: host `http://flaresolverr:8191`, tag `flare`
+2. Settings → Apps → `+` → Radarr: host `radarr`, port `7878`, API key from `.env`
+3. Settings → Apps → `+` → Sonarr: host `sonarr`, port `8989`, API key from `.env`
+4. Indexers → `+` → e.g. `1337x` → tag `flare` → Test → Save
+5. Settings → General → API Key → copy to `.env` as `PROWLARR_API_KEY`
 
-#### Hardware transcoding
+### Bazarr (`:6767`)
+1. Settings → Radarr: `http://radarr:7878` + API key from `.env` → Save
+2. Settings → Sonarr: `http://sonarr:8989` + API key from `.env` → Save
+3. Settings → Languages → `+` profile: Czech (priority 1), English (priority 2)
+4. Apply the profile to both Radarr and Sonarr sections in Bazarr settings
+5. Settings → Providers → `+` → OpenSubtitles.com (free account needed)
+6. System → Tasks → **Search for missing subtitles** (run once to backfill)
+7. Settings → General → API Key → copy to `.env` as `BAZARR_API_KEY`
 
-> **Windows limitation:** `/dev/dri` je linuxový device node — na Windows/Docker Desktop
-> nefunguje. Jellyfin transcoduje na CPU. Pokud stack přesunete na Linux host,
-> odkomentujte `devices: - /dev/dri:/dev/dri` v `docker-compose.yml` a pak nastavte:
-> Dashboard → Playback → Hardware acceleration → Intel QuickSync / VAAPI.
-
----
-
-## Downloading
-
-### Download a movie
-1. Open **http://localhost:7878** (Radarr)
-2. Movies → **Add New** → type the movie name in English (e.g. `Inception`)
-3. Select the movie from the list, leave Quality Profile as `Any`
-4. Click **Add Movie** – Radarr will find and download it automatically
-
-The movie will appear in Jellyfin automatically.
-
-### Download a TV show
-1. Open **http://localhost:8989** (Sonarr)
-2. Series → **Add New** → type the show name
-3. Root Folder: `/data/shows`
-4. Click **Add Series**
-
-### Add a file manually
-
-Copy the file into the correct folder with the right naming:
-
+### API keys for Homepage dashboard
+After filling in all API keys in `.env`, restart to apply:
+```bash
+docker compose up -d
 ```
-C:\Media\movies\Movie Title (year)\Movie Title (year).mkv
-C:\Media\shows\Show Name\Season 01\S01E01.mkv
-```
-
-Examples:
-```
-C:\Media\movies\Oppenheimer (2023)\Oppenheimer (2023).mkv
-C:\Media\shows\Breaking Bad\Season 01\S01E01.mkv
-```
-
-Then in Jellyfin: Dashboard → **Scan All Libraries** (or wait, it scans automatically).
-
----
-
-## Samsung TV
-
-**Via browser** (works immediately):
-- Open browser on TV → `http://<HOST_IP>:8096`
-
-**Via app** (better experience):
-- Samsung App Store → search for **Jellyfin**
-- After install, enter server: `http://<HOST_IP>:8096`
-- If not in App Store: TV → Settings → Support → About TV → press `12345` → enable Developer Mode
-
-**DLNA** (built-in player):
-- TV → Source → Media Player → finds Jellyfin automatically (port 1900)
+See [.env.example](.env.example) for the full list of variables.
 
 ---
 
@@ -176,78 +109,62 @@ Then in Jellyfin: Dashboard → **Scan All Libraries** (or wait, it scans automa
 local-tv/
 ├── docker-compose.yml
 ├── .env                    ← your local config (not in git)
-├── .env.example            ← template to copy from
-├── config/                 ← service configs (created automatically, not in git)
-│   ├── jellyfin/
-│   ├── qbittorrent/
-│   ├── radarr/
-│   ├── sonarr/
-│   ├── prowlarr/
-│   └── homepage/
-│
-C:/Media/                   ← your media (path from .env), mounted as /data in all containers
-├── movies/                 ← /data/movies inside containers
-├── shows/                  ← /data/shows inside containers
-└── downloads/              ← /data/downloads – torrent client saves here
+├── .env.example            ← template
+└── (CONFIG_DIR)/           ← service configs, created automatically
+    ├── jellyfin/
+    ├── qbittorrent/
+    ├── radarr/
+    ├── sonarr/
+    ├── prowlarr/
+    ├── bazarr/
+    └── homepage/
+
+(MEDIA_DIR)/                ← mounted as /data in all containers
+├── movies/
+├── shows/
+└── downloads/
 ```
 
-All containers share the same `/data` mount, which enables **hardlinks**: after download,
-Radarr/Sonarr create a hardlink from `/data/downloads/…` to `/data/movies/…` (or shows).
-The file exists on disk only once — qBittorrent keeps seeding from `downloads/`,
-Jellyfin reads from `movies/` or `shows/`.
-
-> All service configs live in `config/` – restarting (`docker compose down && up -d`) preserves everything.
-> Deleting `config/` means you'll need to reconfigure from scratch.
+All containers share the same `/data` mount → hardlinks work:
+after download Radarr/Sonarr hardlink `downloads/ → movies/` or `shows/`.
+File exists on disk once, qBittorrent seeds from `downloads/`, Jellyfin reads from `movies/`.
 
 ---
 
 ## Useful commands
 
 ```bash
-# Start the stack
-docker compose up -d
-
-# Stop the stack
-docker compose down
-
-# View service logs
-docker logs jellyfin -f
-
-# Update images manually (Watchtower does this automatically)
-docker compose pull && docker compose up -d
-
-# Container status
-docker compose ps
+docker compose up -d           # start
+docker compose down            # stop
+docker compose logs sonarr -f  # logs
+docker compose pull && docker compose up -d  # manual update
 ```
 
 ---
 
 ## Troubleshooting
 
-**Movie/show not showing in Jellyfin?**
-- Check filename – must be `Title (year).mkv` for movies, `S01E01.mkv` for episodes
-- Run a manual scan: Jellyfin → Dashboard → **Scan All Libraries**
-- On Windows/Docker, automatic file detection doesn't work reliably – fix: set up Jellyfin connection in Radarr and Sonarr (Settings → Connect → Emby/Jellyfin) so they notify Jellyfin right after each download
+**Not showing in Jellyfin?**
+- Filename must be `Title (year).mkv` for movies, `S01E01.mkv` for episodes
+- Radarr/Sonarr → Connect → Emby/Jellyfin triggers instant scan after download
 
-**Can't delete media from Jellyfin?**
-- Three dots on a title → Delete – Jellyfin will delete the file from disk
-- If it says "access denied", make sure you're logged in as an admin account
+**"Folder is not writable by user abc" in Radarr/Sonarr?**
+- Media directory isn't owned by the user matching your PUID/PGID
+- Fix: `sudo chown -R 1000:1000 /your/media/dir` (replace 1000 with your PUID/PGID - but 1000 is default)
 
 **Downloads not working?**
-- Prowlarr → http://localhost:9696 → indexers must be green
-- Try a different indexer
+- Prowlarr → indexers must be green; try a different indexer
 
 **Container crashed?**
 ```bash
-docker compose logs <name>   # e.g. docker compose logs sonarr
+docker compose logs <name>
 docker compose restart <name>
 ```
 
 ---
 
-## Moving to a NAS / another PC
+## Samsung TV
 
-1. Copy the entire `local-tv/` folder including `config/`
-2. Edit `.env` – set new `HOST_IP`
-3. Move or mount media over the network (NFS/SMB)
-4. `docker compose up -d`
+- Browser: `http://<HOST_IP>:8096`
+- App: Samsung App Store → Jellyfin → enter server URL
+- DLNA: TV → Source → Media Player (auto-discovers via port 1900)
