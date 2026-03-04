@@ -178,6 +178,25 @@ services:
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
+  #  FILEBROWSER – web file manager
+  #  http://localhost:${PORT_FILEBROWSER}
+  #  Default login: admin / admin  (change after first login!)
+  # ─────────────────────────────────────────────
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    user: root
+    environment:
+      - FB_DATABASE=/config/filebrowser.db
+    volumes:
+      - ${MEDIA_DIR}:/srv/media                    # media files
+      - ${CONFIG_DIR}:/srv/config                  # service configs (homepage etc.)
+      - ${CONFIG_DIR}/filebrowser:/config          # database & settings
+    ports:
+      - "${PORT_FILEBROWSER}:80"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
   #  WATCHTOWER – automatic image updates
   #  Runs every day at 4:00
   # ─────────────────────────────────────────────

@@ -6,9 +6,12 @@ layout:
   Media:
     style: row
     columns: 1
-  Downloads:
+  Database:
     style: row
-    columns: 4
-  System:
+    columns: 3
+  Torrents:
     style: row
     columns: 2
+  System:
+    style: row
+    columns: 3

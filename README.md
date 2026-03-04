@@ -15,6 +15,7 @@ Home media server: Jellyfin + automated downloading via Radarr/Sonarr.
 | **Sonarr** | 8989 | TV show automation |
 | **Bazarr** | 6767 | Subtitle downloads |
 | **Glances** | 61208 | System monitor |
+| **FileBrowser** | 8081 | Web file manager (upload subtitles etc.) |
 | **Watchtower** | — | Auto-updates containers daily at 4:00 |
 
 ---
@@ -66,6 +67,8 @@ After first start, configure each service once. All URLs use your `HOST_IP`.
 3. Dashboard → API Keys → create a key and put it in `.env` as `JELLYFIN_API_KEY`
 4. Dashboard → Playback → Hardware acceleration → VAAPI (if host has Intel iGPU; remove `devices` from `docker-compose.yml` if it doesn't)
 
+> **Verify GPU acceleration:** `docker exec jellyfin ls /dev/dri` should list `card0` and `renderD128`. Then start playing something and check Dashboard → Active Devices — if it shows "direct stream" or "direct play" without CPU spike, it's working.
+
 ### Radarr (`:7878`)
 1. Settings → Media Management → Root Folders → `/data/movies`
 2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, username `admin`, password from `.env`, category `radarr`
@@ -95,6 +98,19 @@ After first start, configure each service once. All URLs use your `HOST_IP`.
 5. Settings → Providers → `+` → OpenSubtitles.com (free account needed)
 6. System → Tasks → **Search for missing subtitles** (run once to backfill)
 7. Settings → General → API Key → copy to `.env` as `BAZARR_API_KEY`
+
+### FileBrowser (`:8081`)
+
+> **First login:** FileBrowser generates a random password on first run.
+> Get it from logs: `docker logs filebrowser 2>&1 | grep password`
+> Username is `admin`. Then change the password in Settings.
+
+1. Settings (top right) → User Management → admin → change password → Save
+2. Two folders are available:
+   - `/media` — all media files (movies, shows, downloads)
+   - `/config` — service configs, including Homepage YAML files at `/config/homepage/`
+
+Edit Homepage config directly in the browser: navigate to `/config/homepage/`, click a `.yaml` file → Edit. Changes take effect immediately without restarting anything.
 
 ### API keys for Homepage dashboard
 After filling in all API keys in `.env`, restart to apply:
