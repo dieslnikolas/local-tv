@@ -1,0 +1,65 @@
+- Media:
+    - Jellyfin:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8096"
+        description: Media server
+        icon: jellyfin.png
+        widget:
+          type: jellyfin
+          url: http://jellyfin:8096
+          key: "{{HOMEPAGE_VAR_JELLYFIN_KEY}}"
+
+- Downloads:
+    - Radarr:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:7878"
+        description: Movie automation
+        icon: radarr.png
+        widget:
+          type: radarr
+          url: http://radarr:7878
+          key: "{{HOMEPAGE_VAR_RADARR_KEY}}"
+    - Sonarr:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8989"
+        description: TV show automation
+        icon: sonarr.png
+        widget:
+          type: sonarr
+          url: http://sonarr:8989
+          key: "{{HOMEPAGE_VAR_SONARR_KEY}}"
+    - qBittorrent:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8080"
+        description: Torrent client
+        icon: qbittorrent.png
+        widget:
+          type: qbittorrent
+          url: http://qbittorrent:8080
+          username: admin
+          password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
+    - Prowlarr:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:9696"
+        description: Indexer manager
+        icon: prowlarr.png
+        widget:
+          type: prowlarr
+          url: http://prowlarr:9696
+          key: "{{HOMEPAGE_VAR_PROWLARR_KEY}}"
+
+- System:
+    - Glances:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:61208"
+        description: System monitor
+        icon: glances.png
+        widget:
+          type: glances
+          url: http://glances:61208
+    - Portainer:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:9000"
+        description: Container management
+        icon: portainer.png
+    - Bazarr:
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:6767"
+        description: Subtitle downloads
+        icon: bazarr.png
+        widget:
+          type: bazarr
+          url: http://bazarr:6767
+          key: "{{HOMEPAGE_VAR_BAZARR_KEY}}"

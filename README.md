@@ -31,9 +31,11 @@ $EDITOR .env
 
 Set at minimum: `HOST_IP`, `MEDIA_DIR`, `CONFIG_DIR` — see [.env.example](.env.example) for all variables and descriptions.
 
-Create the media folders:
+Create the required directories and copy Homepage config:
 ```bash
 mkdir -p /mnt/media/{movies,shows,downloads}
+mkdir -p $CONFIG_DIR/homepage
+cp homepage/* $CONFIG_DIR/homepage/
 ```
 
 Start:
