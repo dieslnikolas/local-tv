@@ -34,7 +34,7 @@ Set at minimum: `HOST_IP`, `MEDIA_DIR`, `CONFIG_DIR` — see [.env.example](.env
 
 Create the required directories and copy Homepage config:
 ```bash
-mkdir -p /mnt/media/{movies,shows,downloads}
+mkdir -p "$MEDIA_DIR"/{movies,shows,downloads}
 mkdir -p $CONFIG_DIR/homepage
 cp homepage/* $CONFIG_DIR/homepage/
 ```
