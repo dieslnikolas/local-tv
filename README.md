@@ -128,14 +128,15 @@ local-tv/
 ├── docker-compose.yml
 ├── .env                    ← your local config (not in git)
 ├── .env.example            ← template
-└── (CONFIG_DIR)/           ← service configs, created automatically
+└── (CONFIG_DIR)/           ← service configs (create this and subfolders manually)
     ├── jellyfin/
     ├── qbittorrent/
     ├── radarr/
     ├── sonarr/
     ├── prowlarr/
     ├── bazarr/
-    └── homepage/
+    ├── homepage/
+    └── filebrowser/
 
 (MEDIA_DIR)/                ← mounted as /data in all containers
 ├── movies/
