@@ -18,8 +18,10 @@ services:
       - "${PORT_JELLYFIN}:8096"       # web UI + API
       - "${PORT_JELLYFIN_DISCOVERY}:7359/udp"   # auto-discovery (Samsung TV app)
       - "${PORT_JELLYFIN_DLNA}:1900/udp"        # DLNA (Samsung TV native player)
-    devices:
-      - /dev/dri:/dev/dri   # Intel iGPU (Quick Sync / VAAPI) — remove if host has no iGPU
+    # Enable the following device mapping only if your host has an Intel iGPU (Quick Sync / VAAPI)
+    # or another GPU exposing /dev/dri for hardware acceleration:
+    # devices:
+    #   - /dev/dri:/dev/dri
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
