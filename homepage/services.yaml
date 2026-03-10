@@ -1,6 +1,6 @@
 - Media:
     - Jellyfin:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8096"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_JELLYFIN}}"
         description: Media server
         icon: jellyfin.png
         widget:
@@ -10,7 +10,7 @@
 
 - Database:
     - Radarr:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:7878"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_RADARR}}"
         description: Movie automation
         icon: radarr.png
         widget:
@@ -18,7 +18,7 @@
           url: http://radarr:7878
           key: "{{HOMEPAGE_VAR_RADARR_KEY}}"
     - Sonarr:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8989"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_SONARR}}"
         description: TV show automation
         icon: sonarr.png
         widget:
@@ -26,7 +26,7 @@
           url: http://sonarr:8989
           key: "{{HOMEPAGE_VAR_SONARR_KEY}}"
     - Bazarr:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:6767"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_BAZARR}}"
         description: Subtitle downloads
         icon: bazarr.png
         widget:
@@ -35,7 +35,7 @@
           key: "{{HOMEPAGE_VAR_BAZARR_KEY}}"
 - Torrents:
     - qBittorrent:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8080"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_QBITTORRENT}}"
         description: Torrent client
         icon: qbittorrent.png
         widget:
@@ -44,7 +44,7 @@
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
     - Prowlarr:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:9696"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_PROWLARR}}"
         description: Indexer manager
         icon: prowlarr.png
         widget:
@@ -55,10 +55,10 @@
 
 - System:
     - Glances:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:61208"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_GLANCES}}"
         description: System monitor
         icon: glances.png
     - FileBrowser:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8081"
+        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:{{HOMEPAGE_VAR_PORT_FILEBROWSER}}"
         description: File manager
         icon: filebrowser.png
