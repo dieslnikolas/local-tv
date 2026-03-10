@@ -192,7 +192,7 @@ services:
       - FB_DATABASE=/config/filebrowser.db
     volumes:
       - ${MEDIA_DIR}:/srv/media                    # media files
-      - ${CONFIG_DIR}:/srv/config                  # service configs (homepage etc.)
+      - ${CONFIG_DIR}:/srv/config:ro               # service configs (homepage etc.) – read-only
       - ${CONFIG_DIR}/filebrowser:/config          # database & settings
     ports:
       - "${PORT_FILEBROWSER}:80"
