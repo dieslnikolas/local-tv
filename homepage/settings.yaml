@@ -1,0 +1,17 @@
+title: Local TV
+theme: dark
+color: slate
+headerStyle: clean
+layout:
+  Media:
+    style: row
+    columns: 1
+  Database:
+    style: row
+    columns: 3
+  Torrents:
+    style: row
+    columns: 2
+  System:
+    style: row
+    columns: 3

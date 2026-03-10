@@ -11,17 +11,17 @@ services:
       - TZ=${TZ}
       - JELLYFIN_PublishedServerUrl=http://${HOST_IP}:${PORT_JELLYFIN}
     volumes:
-      - ./config/jellyfin:/config
-      - ./config/jellyfin/cache:/cache
+      - ${CONFIG_DIR}/jellyfin:/config
+      - ${CONFIG_DIR}/jellyfin/cache:/cache
       - ${MEDIA_DIR}:/data          # /data/movies, /data/shows
     ports:
       - "${PORT_JELLYFIN}:8096"       # web UI + API
       - "${PORT_JELLYFIN_DISCOVERY}:7359/udp"   # auto-discovery (Samsung TV app)
       - "${PORT_JELLYFIN_DLNA}:1900/udp"        # DLNA (Samsung TV native player)
+    # Enable the following device mapping only if your host has an Intel iGPU (Quick Sync / VAAPI)
+    # or another GPU exposing /dev/dri for hardware acceleration:
     # devices:
-    #   Na Windows/Docker Desktop HW transcoding přes /dev/dri nefunguje.
-    #   Jellyfin transcoduje na CPU. Pokud přejdeš na Linux host, odkomentuj:
-    #   - /dev/dri:/dev/dri   # Intel iGPU (Quick Sync / VAAPI)
+    #   - /dev/dri:/dev/dri
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
@@ -42,7 +42,7 @@ services:
       - TZ=${TZ}
       - WEBUI_PORT=8080
     volumes:
-      - ./config/qbittorrent:/config
+      - ${CONFIG_DIR}/qbittorrent:/config
       - ${MEDIA_DIR}:/data          # /data/downloads = stažené, /data/movies, /data/shows = media
     ports:
       - "${PORT_QBITTORRENT}:8080"         # web UI
@@ -96,7 +96,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ./config/prowlarr:/config
+      - ${CONFIG_DIR}/prowlarr:/config
     ports:
       - "${PORT_PROWLARR}:9696"
     restart: unless-stopped
@@ -113,7 +113,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ./config/radarr:/config
+      - ${CONFIG_DIR}/radarr:/config
       - ${MEDIA_DIR}:/data          # /data/movies = root folder, /data/downloads = stažené
     ports:
       - "${PORT_RADARR}:7878"
@@ -131,7 +131,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ./config/sonarr:/config
+      - ${CONFIG_DIR}/sonarr:/config
       - ${MEDIA_DIR}:/data          # /data/shows = root folder, /data/downloads = stažené
     ports:
       - "${PORT_SONARR}:8989"
@@ -149,7 +149,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ./config/bazarr:/config
+      - ${CONFIG_DIR}/bazarr:/config
       - ${MEDIA_DIR}:/data          # /data/movies, /data/shows
     ports:
       - "${PORT_BAZARR}:6767"
@@ -164,17 +164,46 @@ services:
     container_name: homepage
     environment:
       - TZ=${TZ}
+      - HOMEPAGE_ALLOWED_HOSTS=localhost
+      - HOMEPAGE_VAR_HOST_IP=${HOST_IP}
       - HOMEPAGE_VAR_RADARR_KEY=${RADARR_API_KEY}
       - HOMEPAGE_VAR_SONARR_KEY=${SONARR_API_KEY}
       - HOMEPAGE_VAR_PROWLARR_KEY=${PROWLARR_API_KEY}
       - HOMEPAGE_VAR_JELLYFIN_KEY=${JELLYFIN_API_KEY}
       - HOMEPAGE_VAR_QBIT_PASSWORD=${QBIT_PASSWORD}
       - HOMEPAGE_VAR_BAZARR_KEY=${BAZARR_API_KEY}
+      - HOMEPAGE_VAR_PORT_JELLYFIN=${PORT_JELLYFIN}
+      - HOMEPAGE_VAR_PORT_QBITTORRENT=${PORT_QBITTORRENT}
+      - HOMEPAGE_VAR_PORT_GLANCES=${PORT_GLANCES}
+      - HOMEPAGE_VAR_PORT_PROWLARR=${PORT_PROWLARR}
+      - HOMEPAGE_VAR_PORT_RADARR=${PORT_RADARR}
+      - HOMEPAGE_VAR_PORT_SONARR=${PORT_SONARR}
+      - HOMEPAGE_VAR_PORT_BAZARR=${PORT_BAZARR}
+      - HOMEPAGE_VAR_PORT_FILEBROWSER=${PORT_FILEBROWSER}
     volumes:
-      - ./config/homepage:/app/config
+      - ${CONFIG_DIR}/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro   # container status visibility
     ports:
       - "${PORT_HOMEPAGE}:3000"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  #  FILEBROWSER – web file manager
+  #  http://localhost:${PORT_FILEBROWSER}
+  #  Default login: admin / admin  (change after first login!)
+  # ─────────────────────────────────────────────
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    user: "${PUID}:${PGID}"
+    environment:
+      - FB_DATABASE=/config/filebrowser.db
+    volumes:
+      - ${MEDIA_DIR}:/srv/media                    # media files
+      - ${CONFIG_DIR}:/srv/config:ro               # service configs (homepage etc.) – read-only
+      - ${CONFIG_DIR}/filebrowser:/config          # database & settings
+    ports:
+      - "${PORT_FILEBROWSER}:80"
     restart: unless-stopped
 
   # ─────────────────────────────────────────────
