@@ -13,15 +13,13 @@ services:
     volumes:
       - ${CONFIG_DIR}/jellyfin:/config
       - ${CONFIG_DIR}/jellyfin/cache:/cache
-      - ${MEDIA_DIR}:/data          # /data/movies, /data/shows
+      - ${MEDIA_DIR}:/data          # /data/media/movies, /data/media/tv
     ports:
       - "${PORT_JELLYFIN}:8096"       # web UI + API
       - "${PORT_JELLYFIN_DISCOVERY}:7359/udp"   # auto-discovery (Samsung TV app)
       - "${PORT_JELLYFIN_DLNA}:1900/udp"        # DLNA (Samsung TV native player)
-    # Enable the following device mapping only if your host has an Intel iGPU (Quick Sync / VAAPI)
-    # or another GPU exposing /dev/dri for hardware acceleration:
-    # devices:
-    #   - /dev/dri:/dev/dri
+    # For GPU / hardware acceleration (Intel VAAPI, NVIDIA, AMD) use the override:
+    #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
@@ -43,7 +41,7 @@ services:
       - WEBUI_PORT=8080
     volumes:
       - ${CONFIG_DIR}/qbittorrent:/config
-      - ${MEDIA_DIR}:/data          # /data/downloads = stažené, /data/movies, /data/shows = media
+      - ${MEDIA_DIR}:/data          # /data/torrents = downloads, /data/media = media library
     ports:
       - "${PORT_QBITTORRENT}:8080"         # web UI
       - "${PORT_TORRENT}:6881"             # torrent port TCP
@@ -114,7 +112,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ${CONFIG_DIR}/radarr:/config
-      - ${MEDIA_DIR}:/data          # /data/movies = root folder, /data/downloads = stažené
+      - ${MEDIA_DIR}:/data          # /data/media/movies = root folder, /data/torrents = downloads
     ports:
       - "${PORT_RADARR}:7878"
     restart: unless-stopped
@@ -132,7 +130,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ${CONFIG_DIR}/sonarr:/config
-      - ${MEDIA_DIR}:/data          # /data/shows = root folder, /data/downloads = stažené
+      - ${MEDIA_DIR}:/data          # /data/media/tv = root folder, /data/torrents = downloads
     ports:
       - "${PORT_SONARR}:8989"
     restart: unless-stopped
@@ -150,7 +148,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ${CONFIG_DIR}/bazarr:/config
-      - ${MEDIA_DIR}:/data          # /data/movies, /data/shows
+      - ${MEDIA_DIR}:/data          # /data/media/movies, /data/media/tv
     ports:
       - "${PORT_BAZARR}:6767"
     restart: unless-stopped

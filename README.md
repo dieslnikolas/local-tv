@@ -35,7 +35,7 @@ Set at minimum: `HOST_IP`, `MEDIA_DIR`, `CONFIG_DIR` — see [.env.example](.env
 Load the variables from `.env` into your current shell, then create the required directories and copy Homepage config:
 ```bash
 set -a && source .env && set +a
-mkdir -p "$MEDIA_DIR"/{movies,shows,downloads}
+mkdir -p "$MEDIA_DIR"/{media/{movies,tv},torrents/{movies,tv}}
 mkdir -p "$CONFIG_DIR/homepage"
 cp homepage/* "$CONFIG_DIR/homepage/"
 ```
@@ -57,28 +57,26 @@ After first start, configure each service once. All URLs use your `HOST_IP`.
 > Get it from logs: `docker logs qbittorrent 2>&1 | grep -i password`
 > Username is `admin`. Then set a permanent password in Settings → Web UI.
 
-1. Settings → Downloads → Default Save Path: `/data/downloads`
+1. Settings → Downloads → Default Save Path: `/data/torrents`
 2. Settings → Downloads → Categories:
-   - `radarr` → `/data/downloads/radarr`
-   - `sonarr` → `/data/downloads/sonarr`
+   - `movies` → `/data/torrents/movies`
+   - `tv` → `/data/torrents/tv`
 
 ### Jellyfin (`:8096`)
 1. Run setup wizard, create admin account
-2. Add libraries: Movies → `/data/movies`, Shows → `/data/shows`
+2. Add libraries: Movies → `/data/media/movies`, Shows → `/data/media/tv`
 3. Dashboard → API Keys → create a key and put it in `.env` as `JELLYFIN_API_KEY`
-4. Dashboard → Playback → Hardware acceleration → VAAPI (if host has Intel iGPU; remove `devices` from `docker-compose.yml` if it doesn't)
-
-> **Verify GPU acceleration:** `docker exec jellyfin ls /dev/dri` should list `card0` and `renderD128`. Then start playing something and check Dashboard → Active Devices — if it shows "direct stream" or "direct play" without CPU spike, it's working.
+4. **Hardware acceleration (optional):** see [GPU Acceleration](#gpu-acceleration) below
 
 ### Radarr (`:7878`)
-1. Settings → Media Management → Root Folders → `/data/movies`
-2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, username `admin`, password from `.env`, category `radarr`
+1. Settings → Media Management → Root Folders → `/data/media/movies`
+2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, username `admin`, password from `.env`, category `movies`
 3. Settings → Connect → `+` → Emby/Jellyfin: host `jellyfin`, port `8096`, API key from `.env`
 4. Settings → General → API Key → copy to `.env` as `RADARR_API_KEY`
 
 ### Sonarr (`:8989`)
-1. Settings → Media Management → Root Folders → `/data/shows`
-2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, username `admin`, password from `.env`, category `sonarr`
+1. Settings → Media Management → Root Folders → `/data/media/tv`
+2. Settings → Download Clients → `+` → qBittorrent: host `qbittorrent`, port `8080`, username `admin`, password from `.env`, category `tv`
 3. Settings → Connect → `+` → Emby/Jellyfin: same as Radarr
 4. Settings → General → API Key → copy to `.env` as `SONARR_API_KEY`
 
@@ -127,6 +125,7 @@ See [.env.example](.env.example) for the full list of variables.
 ```
 local-tv/
 ├── docker-compose.yml
+├── docker-compose.gpu.yml  ← GPU acceleration override (optional)
 ├── .env                    ← your local config (not in git)
 ├── .env.example            ← template
 └── (CONFIG_DIR)/           ← service configs (create this and subfolders manually)
@@ -140,14 +139,48 @@ local-tv/
     └── filebrowser/
 
 (MEDIA_DIR)/                ← mounted as /data in all containers
-├── movies/
-├── shows/
-└── downloads/
+├── media/
+│   ├── movies/             ← Radarr root folder / Jellyfin Movies library
+│   └── tv/                 ← Sonarr root folder / Jellyfin TV Shows library
+└── torrents/
+    ├── movies/             ← qBittorrent category "movies"
+    └── tv/                 ← qBittorrent category "tv"
 ```
 
 All containers share the same `/data` mount → hardlinks work:
-after download Radarr/Sonarr hardlink `downloads/ → movies/` or `shows/`.
-File exists on disk once, qBittorrent seeds from `downloads/`, Jellyfin reads from `movies/`.
+after download Radarr/Sonarr hardlink `torrents/ → media/` without copying the file.
+qBittorrent continues seeding from `torrents/`, Jellyfin reads from `media/`.
+
+> This layout follows the [Trash Guides recommended structure](https://trash-guides.info/File-and-Folder-Structure/Hardlinks-and-Instant-Moves/)
+> for instant imports and zero-copy hardlinks.
+
+---
+
+## GPU Acceleration
+
+Hardware-accelerated transcoding reduces CPU usage during video playback.
+Use the `docker-compose.gpu.yml` override to enable it:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+```
+
+### Intel / AMD (VAAPI)
+
+1. Verify the GPU is accessible on the host: `ls /dev/dri` should show `card0` and `renderD128`
+2. Start with the GPU override (command above)
+3. Jellyfin → Dashboard → Playback → Transcoding:
+   - Hardware acceleration: **VAAPI**
+   - VA-API device: `/dev/dri/renderD128`
+   - Enable all available hardware decoders and encoders
+4. Verify: start a video that requires transcoding (e.g., change quality to force it) → Dashboard → Active Devices — should show **Transcode (HW)** next to the stream and no significant CPU spike
+
+### NVIDIA
+
+1. Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) on the host
+2. In `docker-compose.gpu.yml`, comment out the `devices:` block and uncomment the `deploy:` block
+3. Start with the GPU override (command above)
+4. Jellyfin → Dashboard → Playback → Transcoding → Hardware acceleration: **NVENC**
 
 ---
 
