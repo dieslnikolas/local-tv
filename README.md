@@ -32,11 +32,12 @@ $EDITOR .env
 
 Set at minimum: `HOST_IP`, `MEDIA_DIR`, `CONFIG_DIR` — see [.env.example](.env.example) for all variables and descriptions.
 
-Create the required directories and copy Homepage config:
+Load the variables from `.env` into your current shell, then create the required directories and copy Homepage config:
 ```bash
+set -a && source .env && set +a
 mkdir -p "$MEDIA_DIR"/{movies,shows,downloads}
-mkdir -p $CONFIG_DIR/homepage
-cp homepage/* $CONFIG_DIR/homepage/
+mkdir -p "$CONFIG_DIR/homepage"
+cp homepage/* "$CONFIG_DIR/homepage/"
 ```
 
 Start:
