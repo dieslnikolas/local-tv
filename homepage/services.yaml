@@ -58,10 +58,6 @@
         href: "http://{{HOMEPAGE_VAR_HOST_IP}}:61208"
         description: System monitor
         icon: glances.png
-    - Portainer:
-        href: "http://{{HOMEPAGE_VAR_HOST_IP}}:9000"
-        description: Container management
-        icon: portainer.png
     - FileBrowser:
         href: "http://{{HOMEPAGE_VAR_HOST_IP}}:8081"
         description: File manager
