@@ -1,0 +1,10 @@
+steps:
+  - name: Install Docker Compose
+    run: |
+      docker compose version || (
+        sudo apt-get update -qq &&
+        sudo apt-get install -y -qq docker-compose-plugin
+      )
+
+  - name: Validate Compose file
+    run: docker compose config
