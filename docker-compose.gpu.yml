@@ -1,0 +1,46 @@
+# GPU acceleration override for Jellyfin
+#
+# Adds hardware-accelerated transcoding support by exposing the host GPU to Jellyfin.
+#
+# Usage (start the full stack with GPU enabled):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# ─────────────────────────────────────────────
+#  Intel / AMD iGPU  (VAAPI / Quick Sync)
+# ─────────────────────────────────────────────
+# Requirements:
+#   - Intel Gen 6+ (Skylake) or AMD GPU with /dev/dri available on the host
+#   - Verify: ls /dev/dri  →  should list card0 and renderD128
+#
+# Jellyfin setup after starting with this override:
+#   Dashboard → Playback → Transcoding → Hardware acceleration → VAAPI
+#   VA-API device: /dev/dri/renderD128
+#   Enable all available hardware decoders and encoders
+#
+# ─────────────────────────────────────────────
+#  NVIDIA GPU
+# ─────────────────────────────────────────────
+# Requirements:
+#   - NVIDIA Container Toolkit installed on host
+#     https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+#   - Verify: docker run --rm --gpus all nvidia/cuda:12.0-base nvidia-smi
+#
+# Uncomment the 'deploy' section below and comment out 'devices' to use NVIDIA instead.
+#
+# Jellyfin setup after starting with NVIDIA support:
+#   Dashboard → Playback → Transcoding → Hardware acceleration → NVENC
+
+services:
+  jellyfin:
+    # Intel / AMD iGPU via VAAPI (default)
+    devices:
+      - /dev/dri:/dev/dri
+
+    # NVIDIA GPU – uncomment below and comment out 'devices' above to use NVIDIA instead:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
